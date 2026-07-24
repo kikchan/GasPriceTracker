@@ -204,7 +204,7 @@ function buildStationWidgetItems(stations) {
         .join(" / ");
 
       const info = stationInfoMap[stationId] || {};
-      const baseName = station ? station.nombreEstacion || station.nombre : info.name || `Station ${stationId}`;
+      const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
       const direccion = station ? station.direccion : info.address || "";
       const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
       const name = `${baseName} (${lastUpdate})`;
@@ -212,7 +212,7 @@ function buildStationWidgetItems(stations) {
       return {
         stationId,
         name,
-        label: `${fuelParts} — updated ${lastUpdate}`,
+        label: fuelParts,
         lastUpdate,
         direccion,
         distancia: station ? station.distancia ?? null : null,
