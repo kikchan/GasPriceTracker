@@ -227,20 +227,16 @@ function buildStationWidgetItems(stations) {
     const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
     const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
     const updateLabel = formatStationUpdateLabel(baseName, lastUpdate);
-    const diesel = formatFuelPrice(station && station.Diesel);
-    const gasolina95 = formatFuelPrice(station && station.Gasolina95);
-    const gasolina98 = formatFuelPrice(station && station.Gasolina98);
+    const fuels = stationFuelMap[stationId] || ["Diesel"];
 
-    items.push({ name: baseName, label: updateLabel });
-    if (diesel !== null) {
-      items.push({ name: "Diesel", label: `${diesel} €` });
-    }
-    if (gasolina95 !== null) {
-      items.push({ name: "Gasolina95", label: `${gasolina95} €` });
-    }
-    if (gasolina98 !== null) {
-      items.push({ name: "Gasolina98", label: `${gasolina98} €` });
-    }
+    items.push({ name: updateLabel, label: baseName });
+
+    fuels.forEach((fuel) => {
+      const price = formatFuelPrice(station && station[fuel]);
+      if (price !== null) {
+        items.push({ name: fuel, label: `${price} €` });
+      }
+    });
   });
 
   return items;
