@@ -45,6 +45,7 @@ The backend exposes:
 - `GET /api/config` — returns resolved coordinates and active config
 - `GET /api/prices` — returns station prices filtered by query params
 - `GET /api/cheapest` — returns the cheapest station selling both Diesel and Gasolina98
+- `GET /api/station-widget` — returns a Homepage custom API payload for the three configured stations
 
 Query parameters supported by `/api/prices` and `/api/cheapest`:
 
@@ -64,10 +65,10 @@ Additional `/api/prices` parameters:
 Example request:
 
 ```bash
-curl "http://localhost:2032/api/cheapest?city=Finestrat&radius=2&fuels=Diesel,Gasolina98"
+curl "http://localhost:2032/api/station-widget?city=Finestrat&radius=2"
 ```
 
-The `/api/cheapest` endpoint also returns a `label` and an `items` array formatted for Homepage's `customapi` widget.
+The `/api/station-widget` endpoint returns `items` formatted for Homepage's `customapi` widget, with Diesel for all three stations plus Gasolina95 for Petroprix and Gasolina98 for the Repsol stations.
 ## Notes
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.

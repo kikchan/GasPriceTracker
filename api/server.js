@@ -24,6 +24,13 @@ const defaultConfig = {
   selectedStationName: process.env.SELECTED_STATION_NAME || "",
 };
 
+const widgetStationIds = parseList(process.env.STATION_IDS, ["12061", "13032", "3697"]).map((id) => Number(id)).filter(Boolean);
+const stationFuelMap = {
+  12061: ["Diesel", "Gasolina98"],
+  13032: ["Diesel", "Gasolina95"],
+  3697: ["Diesel", "Gasolina98"],
+};
+
 let geoCache = null;
 
 function parseNumber(value, fallback = null) {
@@ -158,6 +165,43 @@ function filterStations(stations, filters) {
         raw: station,
       };
     });
+}
+
+function buildStationWidgetItems(stations) {
+  const stationById = stations.reduce((map, station) => {
+    map[station.idEstacion] = station;
+    return map;
+  }, {});
+
+  return widgetStationIds
+    .map((stationId) => {
+      const station = stationById[stationId];
+      if (!station) return null;
+
+      const fuels = stationFuelMap[stationId] || ["Diesel"];
+      const prices = fuels.reduce((acc, fuel) => {
+        acc[fuel] = Object.prototype.hasOwnProperty.call(station, fuel) ? station[fuel] : null;
+        return acc;
+      }, {});
+
+      const fuelParts = fuels
+        .map((fuel) => {
+          const value = prices[fuel];
+          return `${fuel}: ${value ?? "N/A"}`;
+        })
+        .join(" / ");
+
+      return {
+        stationId,
+        name: station.nombreEstacion || station.nombre || `Station ${stationId}`,
+        label: `${fuelParts} — updated ${station.lastUpdate || station.fechaCambio || "unknown"}`,
+        lastUpdate: station.lastUpdate || station.fechaCambio || "",
+        direccion: station.direccion || "",
+        distancia: station.distancia ?? null,
+        ...prices,
+      };
+    })
+    .filter(Boolean);
 }
 
 function findCheapestStation(stations, selectedFuels) {
@@ -323,6 +367,52 @@ app.get("/api/cheapest", async (req, res) => {
     };
 
     return res.json(response);
+  } catch (error) {
+    return res.status(502).json({ error: error.message });
+  }
+});
+
+app.get("/api/station-widget", async (req, res) => {
+  try {
+    const query = req.query;
+    const queryCoords = normalizeLatLon(query);
+    const config = {
+      apiKey: defaultConfig.apiKey,
+      city: query.city || defaultConfig.city,
+      latitude: queryCoords.latitude !== null ? queryCoords.latitude : defaultConfig.latitude,
+      longitude: queryCoords.longitude !== null ? queryCoords.longitude : defaultConfig.longitude,
+      radiusKm: parseNumber(query.radius ?? query.radiusKm, defaultConfig.radiusKm),
+      page: parseInt(query.page, 10) || defaultConfig.page,
+      limit: parseInt(query.limit, 10) || defaultConfig.limit,
+      fields: query.fields || defaultConfig.fields,
+    };
+
+    const coords = await resolveCoordinates(config);
+    const precioilUrl = buildPrecioilUrl({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      radiusKm: config.radiusKm,
+      page: config.page,
+      limit: config.limit,
+      fields: config.fields,
+    });
+
+    const stations = await fetchPrecioil(precioilUrl);
+    const items = buildStationWidgetItems(stations);
+
+    return res.json({
+      fetchedAt: new Date().toISOString(),
+      query: {
+        city: config.city,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        radiusKm: config.radiusKm,
+        page: config.page,
+        limit: config.limit,
+        fields: config.fields,
+      },
+      items,
+    });
   } catch (error) {
     return res.status(502).json({ error: error.message });
   }
