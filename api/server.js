@@ -30,6 +30,20 @@ const stationFuelMap = {
   13032: ["Diesel", "Gasolina95"],
   3697: ["Diesel", "Gasolina98"],
 };
+const stationInfoMap = {
+  12061: {
+    name: "Repsol 2",
+    address: "AVENIDA PICASSO, 3",
+  },
+  13032: {
+    name: "PETROPRIX",
+    address: "AVENIDA PICASSO, 41",
+  },
+  3697: {
+    name: "Repsol 1",
+    address: "AVENIDA FEDERICO GARCIA LORCA, 21",
+  },
+};
 
 let geoCache = null;
 
@@ -176,11 +190,9 @@ function buildStationWidgetItems(stations) {
   return widgetStationIds
     .map((stationId) => {
       const station = stationById[stationId];
-      if (!station) return null;
-
       const fuels = stationFuelMap[stationId] || ["Diesel"];
       const prices = fuels.reduce((acc, fuel) => {
-        acc[fuel] = Object.prototype.hasOwnProperty.call(station, fuel) ? station[fuel] : null;
+        acc[fuel] = station && Object.prototype.hasOwnProperty.call(station, fuel) ? station[fuel] : null;
         return acc;
       }, {});
 
@@ -191,13 +203,19 @@ function buildStationWidgetItems(stations) {
         })
         .join(" / ");
 
+      const info = stationInfoMap[stationId] || {};
+      const baseName = station ? station.nombreEstacion || station.nombre : info.name || `Station ${stationId}`;
+      const direccion = station ? station.direccion : info.address || "";
+      const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
+      const name = `${baseName} (${lastUpdate})`;
+
       return {
         stationId,
-        name: station.nombreEstacion || station.nombre || `Station ${stationId}`,
-        label: `${fuelParts} — updated ${station.lastUpdate || station.fechaCambio || "unknown"}`,
-        lastUpdate: station.lastUpdate || station.fechaCambio || "",
-        direccion: station.direccion || "",
-        distancia: station.distancia ?? null,
+        name,
+        label: `${fuelParts} — updated ${lastUpdate}`,
+        lastUpdate,
+        direccion,
+        distancia: station ? station.distancia ?? null : null,
         ...prices,
       };
     })

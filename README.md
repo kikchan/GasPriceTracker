@@ -3,8 +3,7 @@
 A Docker web app to track local gas station fuel prices using the Precioil API. It includes:
 
 - `api/` — Express backend that resolves city coordinates and returns filtered station prices.
-- `frontend/` — Vite + React UI for configuring location, radius, station, and fuel filters.
-- `docker-compose.yml` — runs the backend on port `2032` and the frontend on port `2033`.
+- `docker-compose.yml` — runs the backend on port `2032`.
 
 ## Setup
 
@@ -26,17 +25,13 @@ A Docker web app to track local gas station fuel prices using the Precioil API. 
    docker compose up --build
    ```
 
-4. Open the frontend in your browser:
+4. Open the API in your browser or call it directly:
 
-   - http://localhost:2033
+   - http://localhost:2032/api/config
    - Or from another machine on your local network:
-     http://192.168.1.20:2033
+     http://192.168.1.20:2032/api/config
 
-If you access the UI from another machine, set `FRONTEND_API_BASE_URL` in `.env` to the API server host, for example:
-
-```bash
-FRONTEND_API_BASE_URL=http://192.168.1.20:2032/api
-```
+If you access the API from another machine, use the server host and port 2032.
 
 ## API usage
 
@@ -73,4 +68,3 @@ The `/api/station-widget` endpoint returns `items` formatted for Homepage's `cus
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.
 - No database is required for the initial implementation.
-- The frontend is configured at build time with `FRONTEND_API_BASE_URL`.
