@@ -219,14 +219,7 @@ function buildStationWidgetItems(stations) {
     return map;
   }, {});
 
-  const items = [];
-  const fuelGroups = {
-    Diesel: [],
-    Gasolina95: [],
-    Gasolina98: [],
-  };
-
-  widgetStationIds.forEach((stationId) => {
+  return widgetStationIds.map((stationId) => {
     const station = stationById[stationId];
     const info = stationInfoMap[stationId] || {};
     const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
@@ -234,18 +227,19 @@ function buildStationWidgetItems(stations) {
     const updateLabel = formatStationUpdateLabel(baseName, lastUpdate);
     const fuels = stationFuelMap[stationId] || ["Diesel"];
 
-    items.push({ name: updateLabel, label: baseName });
+    const fuelText = fuels
+      .map((fuel) => {
+        const price = formatFuelPrice(station && station[fuel]);
+        return price !== null ? `${fuel} ${price} €` : null;
+      })
+      .filter(Boolean)
+      .join(" / ");
 
-    fuels.forEach((fuel) => {
-      const price = formatFuelPrice(station && station[fuel]);
-      if (price !== null) {
-        fuelGroups[fuel].push({ name: `${fuel} — ${baseName}`, label: `${price} €` });
-      }
-    });
+    return {
+      name: updateLabel,
+      label: fuelText,
+    };
   });
-
-  items.push(...fuelGroups.Diesel, ...fuelGroups.Gasolina95, ...fuelGroups.Gasolina98);
-  return items;
 }
 
 function findCheapestStation(stations, selectedFuels) {

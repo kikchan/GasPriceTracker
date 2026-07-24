@@ -63,54 +63,30 @@ Example request:
 curl "http://localhost:2032/api/station-widget?city=Finestrat&radius=2"
 ```
 
-The `/api/station-widget` endpoint returns flat fields formatted for Homepage's `customapi` widget, with one update label and fuel price fields for each station.
+The `/api/station-widget` endpoint returns a compact `dynamic-list` payload for the three stations.
 
-Response keys:
-- `currency` — always `EUR`
-- `petroprix` — `PETROPRIX` update label
-- `petroprixDiesel` — Diesel price for PETROPRIX
-- `petroprixGasolina95` — Gasolina95 price for PETROPRIX
-- `repsol1` — `Repsol 1` update label
-- `repsol1Diesel` — Diesel price for Repsol 1
-- `repsol1Gasolina98` — Gasolina98 price for Repsol 1
-- `repsol2` — `Repsol 2` update label
-- `repsol2Diesel` — Diesel price for Repsol 2
-- `repsol2Gasolina98` — Gasolina98 price for Repsol 2
+Each `items` row contains:
+- `name` — station update label, e.g. `PETROPRIX (today at 14:40)`
+- `label` — combined fuel prices for that station, e.g. `Diesel 1.549 € / Gasolina95 1.579 €`
 
 For today’s update timestamps, the label will show `today at HH:MM` instead of a full timestamp.
 
-Example mapping for the widget:
+Example widget config:
 
 ```yaml
-mappings:
-  - field: petroprix
-    label: PETROPRIX update
-    format: text
-  - field: petroprixDiesel
-    label: PETROPRIX Diesel
-    format: number
-  - field: petroprixGasolina95
-    label: PETROPRIX Gasolina95
-    format: number
-  - field: repsol1
-    label: Repsol 1 update
-    format: text
-  - field: repsol1Diesel
-    label: Repsol 1 Diesel
-    format: number
-  - field: repsol1Gasolina98
-    label: Repsol 1 Gasolina98
-    format: number
-  - field: repsol2
-    label: Repsol 2 update
-    format: text
-  - field: repsol2Diesel
-    label: Repsol 2 Diesel
-    format: number
-  - field: repsol2Gasolina98
-    label: Repsol 2 Gasolina98
-    format: number
+widget:
+  type: customapi
+  url: http://192.168.1.20:2032/api/station-widget?city=Finestrat&radius=2
+  display: dynamic-list
+  refreshInterval: 900000
+  method: GET
+  mappings:
+    - field: items
+      label: Selected stations
+      format: list
 ```
+
+If your widget system uses `name` and `label` fields for each array item, it should render the 3 rows cleanly.
 
 ## Notes
 
