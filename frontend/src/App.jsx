@@ -1,10 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 
-const fallbackHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
-const apiBase =
-  import.meta.env.VITE_API_BASE_URL ||
-  `${window.location.protocol}//${fallbackHost}:2032/api`;
+function resolveApiBase() {
+  const env = import.meta.env.VITE_API_BASE_URL;
+  if (env && env !== "") {
+    return env;
+  }
 
+  if (typeof window === "undefined") {
+    return "http://localhost:2032/api";
+  }
+
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:2032/api`;
+}
+
+const apiBase = resolveApiBase();
 const defaultFuels = ["Diesel", "DieselPremium", "Gasolina95", "Gasolina98"];
 
 function parseList(value) {
