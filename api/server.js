@@ -213,30 +213,37 @@ function formatFuelPrice(value) {
   return Number(value).toFixed(3);
 }
 
-function buildStationWidgetPayload(stations) {
+function buildStationWidgetItems(stations) {
   const stationById = stations.reduce((map, station) => {
     map[station.idEstacion] = station;
     return map;
   }, {});
 
-  const payload = {
-    currency: "EUR",
-  };
+  const items = [];
 
   widgetStationIds.forEach((stationId) => {
     const station = stationById[stationId];
     const info = stationInfoMap[stationId] || {};
     const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
     const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
-    const prefix = info.key || `${baseName.toLowerCase().replace(/\s+/g, "")}`;
+    const updateLabel = formatStationUpdateLabel(baseName, lastUpdate);
+    const diesel = formatFuelPrice(station && station.Diesel);
+    const gasolina95 = formatFuelPrice(station && station.Gasolina95);
+    const gasolina98 = formatFuelPrice(station && station.Gasolina98);
 
-    payload[`${prefix}`] = formatStationUpdateLabel(baseName, lastUpdate);
-    payload[`${prefix}Diesel`] = formatFuelPrice(station && station.Diesel);
-    payload[`${prefix}Gasolina95`] = formatFuelPrice(station && station.Gasolina95);
-    payload[`${prefix}Gasolina98`] = formatFuelPrice(station && station.Gasolina98);
+    items.push({ name: baseName, label: updateLabel });
+    if (diesel !== null) {
+      items.push({ name: "Diesel", label: `${diesel} €` });
+    }
+    if (gasolina95 !== null) {
+      items.push({ name: "Gasolina95", label: `${gasolina95} €` });
+    }
+    if (gasolina98 !== null) {
+      items.push({ name: "Gasolina98", label: `${gasolina98} €` });
+    }
   });
 
-  return payload;
+  return items;
 }
 
 function findCheapestStation(stations, selectedFuels) {
@@ -433,7 +440,7 @@ app.get("/api/station-widget", async (req, res) => {
     });
 
     const stations = await fetchPrecioil(precioilUrl);
-    const payload = buildStationWidgetPayload(stations);
+    const items = buildStationWidgetItems(stations);
 
     return res.json({
       fetchedAt: new Date().toISOString(),
@@ -446,7 +453,7 @@ app.get("/api/station-widget", async (req, res) => {
         limit: config.limit,
         fields: config.fields,
       },
-      ...payload,
+      items,
     });
   } catch (error) {
     return res.status(502).json({ error: error.message });
