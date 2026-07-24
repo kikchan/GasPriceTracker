@@ -1,29 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 
-function isLocalHostHost(hostname) {
-  return ["localhost", "127.0.0.1", "::1"].includes(hostname);
-}
-
 function resolveApiBase() {
-  const env = import.meta.env.VITE_API_BASE_URL;
   if (typeof window === "undefined") {
-    return env && env !== "" ? env : "http://localhost:2032/api";
+    return "http://localhost:2032/api";
   }
 
   const { protocol, hostname } = window.location;
-  if (env && env !== "") {
-    try {
-      const url = new URL(env);
-      const envHost = url.hostname;
-      if (isLocalHostHost(envHost) && !isLocalHostHost(hostname)) {
-        return `${protocol}//${hostname}:2032/api`;
-      }
-      return env;
-    } catch {
-      return `${protocol}//${hostname}:2032/api`;
-    }
-  }
-
   return `${protocol}//${hostname}:2032/api`;
 }
 

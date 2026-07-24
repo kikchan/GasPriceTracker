@@ -29,6 +29,14 @@ A Docker web app to track local gas station fuel prices using the Precioil API. 
 4. Open the frontend in your browser:
 
    - http://localhost:2033
+   - Or from another machine on your local network:
+     http://192.168.1.20:2033
+
+If you access the UI from another machine, set `FRONTEND_API_BASE_URL` in `.env` to the API server host, for example:
+
+```bash
+FRONTEND_API_BASE_URL=http://192.168.1.20:2032/api
+```
 
 ## API usage
 
