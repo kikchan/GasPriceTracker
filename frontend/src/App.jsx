@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:2032/api";
+const fallbackHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
+const apiBase =
+  import.meta.env.VITE_API_BASE_URL ||
+  `${window.location.protocol}//${fallbackHost}:2032/api`;
 
 const defaultFuels = ["Diesel", "DieselPremium", "Gasolina95", "Gasolina98"];
 
