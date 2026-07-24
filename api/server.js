@@ -252,36 +252,29 @@ function buildStationWidgetItems(stations) {
 
   const items = [];
 
-  fuelOrder.forEach((fuel) => {
-    // compute earliest (minimum) date among stations that have this fuel (or any station)
-    const dates = widgetStationIds
-      .map((id) => stationById[id])
-      .map((st) => getStationDate(st))
-      .filter((v) => v !== null);
+  // push the station groups in the requested order
+  const stationGroups = [
+    { stationId: 13032, fuel: "Diesel" },
+    { stationId: 13032, fuel: "Gasolina95" },
+    { stationId: 3697, fuel: "Diesel" },
+    { stationId: 3697, fuel: "Gasolina98" },
+    { stationId: 12061, fuel: "Diesel" },
+    { stationId: 12061, fuel: "Gasolina98" },
+  ];
 
-    let earliestLabel = "unknown";
-    if (dates.length > 0) {
-      const minTs = Math.min(...dates);
-      const dateStr = new Date(minTs).toISOString();
-      // reuse formatStationUpdateLabel style but without baseName
-      const now = new Date();
-      const d = new Date(minTs);
-      const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
-      const timeString = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-      earliestLabel = sameDay ? `today at ${timeString}` : `${dateStr.slice(0,10)} ${timeString}`;
+  stationGroups.forEach(({ stationId, fuel }, index) => {
+    const st = stationById[stationId];
+    const info = stationInfoMap[stationId] || {};
+    const stationName = info.name || (st ? st.nombreEstacion || st.nombre : `Station ${stationId}`);
+    const price = formatFuelPrice(st && st[fuel]);
+
+    if (index === 0 || stationGroups[index - 1].stationId !== stationId) {
+      const lastUpdate = st ? st.lastUpdate || st.fechaCambio || "unknown" : "unknown";
+      const updateLabel = formatStationUpdateLabel(stationName, lastUpdate);
+      items.push({ name: stationName, label: updateLabel });
     }
 
-    // push header row for the fuel with earliest date
-    items.push({ name: fuel, label: earliestLabel });
-
-    // push one row per station in configured order with the price or N/A
-    widgetStationIds.forEach((stationId) => {
-      const st = stationById[stationId];
-      const info = stationInfoMap[stationId] || {};
-      const stationName = info.name || (st ? st.nombreEstacion || st.nombre : `Station ${stationId}`);
-      const price = formatFuelPrice(st && st[fuel]);
-      items.push({ name: stationName, label: price !== null ? `${price} €` : "N/A" });
-    });
+    items.push({ name: fuel, label: price !== null ? `${price} €` : "N/A" });
   });
 
   return items;
