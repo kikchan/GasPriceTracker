@@ -238,27 +238,53 @@ function buildStationWidgetItems(stations) {
     return map;
   }, {});
 
-  return widgetStationIds.map((stationId) => {
-    const station = stationById[stationId];
-    const info = stationInfoMap[stationId] || {};
-    const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
-    const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
-    const updateLabel = formatStationUpdateLabel(baseName, lastUpdate);
-    const fuels = stationFuelMap[stationId] || ["Diesel"];
+  // Helper to get parsed date (ms) for a station
+  const getStationDate = (station) => {
+    if (!station) return null;
+    const raw = station.lastUpdate || station.fechaCambio || null;
+    if (!raw) return null;
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d.getTime();
+  };
 
-    const fuelText = fuels
-      .map((fuel) => {
-        const price = formatFuelPrice(station && station[fuel]);
-        return price !== null ? `${fuel} ${price} €` : null;
-      })
-      .filter(Boolean)
-      .join("    ");
+  // Order of fuels and which stations' prices to show per fuel
+  const fuelOrder = ["Diesel", "Gasolina95", "Gasolina98"];
 
-    return {
-      name: updateLabel,
-      label: fuelText,
-    };
+  const items = [];
+
+  fuelOrder.forEach((fuel) => {
+    // compute earliest (minimum) date among stations that have this fuel (or any station)
+    const dates = widgetStationIds
+      .map((id) => stationById[id])
+      .map((st) => getStationDate(st))
+      .filter((v) => v !== null);
+
+    let earliestLabel = "unknown";
+    if (dates.length > 0) {
+      const minTs = Math.min(...dates);
+      const dateStr = new Date(minTs).toISOString();
+      // reuse formatStationUpdateLabel style but without baseName
+      const now = new Date();
+      const d = new Date(minTs);
+      const sameDay = d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+      const timeString = d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+      earliestLabel = sameDay ? `today at ${timeString}` : `${dateStr.slice(0,10)} ${timeString}`;
+    }
+
+    // push header row for the fuel with earliest date
+    items.push({ name: fuel, label: earliestLabel });
+
+    // push one row per station in configured order with the price or N/A
+    widgetStationIds.forEach((stationId) => {
+      const st = stationById[stationId];
+      const info = stationInfoMap[stationId] || {};
+      const stationName = info.name || (st ? st.nombreEstacion || st.nombre : `Station ${stationId}`);
+      const price = formatFuelPrice(st && st[fuel]);
+      items.push({ name: stationName, label: price !== null ? `${price} €` : "N/A" });
+    });
   });
+
+  return items;
 }
 
 function findCheapestStation(stations, selectedFuels) {
