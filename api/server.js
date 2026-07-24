@@ -220,6 +220,11 @@ function buildStationWidgetItems(stations) {
   }, {});
 
   const items = [];
+  const fuelGroups = {
+    Diesel: [],
+    Gasolina95: [],
+    Gasolina98: [],
+  };
 
   widgetStationIds.forEach((stationId) => {
     const station = stationById[stationId];
@@ -234,11 +239,12 @@ function buildStationWidgetItems(stations) {
     fuels.forEach((fuel) => {
       const price = formatFuelPrice(station && station[fuel]);
       if (price !== null) {
-        items.push({ name: fuel, label: `${price} €` });
+        fuelGroups[fuel].push({ name: `${fuel} — ${baseName}`, label: `${price} €` });
       }
     });
   });
 
+  items.push(...fuelGroups.Diesel, ...fuelGroups.Gasolina95, ...fuelGroups.Gasolina98);
   return items;
 }
 
