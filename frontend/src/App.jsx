@@ -1,16 +1,29 @@
 import { useEffect, useMemo, useState } from "react";
 
+function isLocalHostHost(hostname) {
+  return ["localhost", "127.0.0.1", "::1"].includes(hostname);
+}
+
 function resolveApiBase() {
   const env = import.meta.env.VITE_API_BASE_URL;
-  if (env && env !== "") {
-    return env;
-  }
-
   if (typeof window === "undefined") {
-    return "http://localhost:2032/api";
+    return env && env !== "" ? env : "http://localhost:2032/api";
   }
 
   const { protocol, hostname } = window.location;
+  if (env && env !== "") {
+    try {
+      const url = new URL(env);
+      const envHost = url.hostname;
+      if (isLocalHostHost(envHost) && !isLocalHostHost(hostname)) {
+        return `${protocol}//${hostname}:2032/api`;
+      }
+      return env;
+    } catch {
+      return `${protocol}//${hostname}:2032/api`;
+    }
+  }
+
   return `${protocol}//${hostname}:2032/api`;
 }
 
@@ -42,6 +55,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [meta, setMeta] = useState(null);
+  const [requestUrl, setRequestUrl] = useState("");
 
   useEffect(() => {
     fetch(`${apiBase}/config`)
@@ -96,8 +110,11 @@ function App() {
     if (stationName) params.set("stationName", stationName);
     params.set("fuels", selectedFuels);
 
+    const url = `${apiBase}/prices?${params.toString()}`;
+    setRequestUrl(url);
+
     try {
-      const response = await fetch(`${apiBase}/prices?${params.toString()}`);
+      const response = await fetch(url);
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "API error");
@@ -190,6 +207,12 @@ function App() {
       </form>
 
       {error && <div className="error">{error}</div>}
+      {requestUrl && (
+        <div className="status-card">
+          <strong>Request URL:</strong>
+          <div>{requestUrl}</div>
+        </div>
+      )}
 
       {meta && (
         <div className="status-card">
