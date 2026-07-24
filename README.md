@@ -63,12 +63,55 @@ Example request:
 curl "http://localhost:2032/api/station-widget?city=Finestrat&radius=2"
 ```
 
-The `/api/station-widget` endpoint returns `items` formatted for Homepage's `customapi` widget, with Diesel for all three stations plus Gasolina95 for Petroprix and Gasolina98 for the Repsol stations.
+The `/api/station-widget` endpoint returns flat fields formatted for Homepage's `customapi` widget, with one update label and fuel price fields for each station.
 
-Each item includes:
-- `name` — a fuel price summary string with the `€` currency symbol
-- `label` — the station name with last update date
+Response keys:
 - `currency` — always `EUR`
+- `petroprix` — `PETROPRIX` update label
+- `petroprixDiesel` — Diesel price for PETROPRIX
+- `petroprixGasolina95` — Gasolina95 price for PETROPRIX
+- `repsol1` — `Repsol 1` update label
+- `repsol1Diesel` — Diesel price for Repsol 1
+- `repsol1Gasolina98` — Gasolina98 price for Repsol 1
+- `repsol2` — `Repsol 2` update label
+- `repsol2Diesel` — Diesel price for Repsol 2
+- `repsol2Gasolina98` — Gasolina98 price for Repsol 2
+
+For today’s update timestamps, the label will show `today at HH:MM` instead of a full timestamp.
+
+Example mapping for the widget:
+
+```yaml
+mappings:
+  - field: petroprix
+    label: PETROPRIX update
+    format: text
+  - field: petroprixDiesel
+    label: PETROPRIX Diesel
+    format: number
+  - field: petroprixGasolina95
+    label: PETROPRIX Gasolina95
+    format: number
+  - field: repsol1
+    label: Repsol 1 update
+    format: text
+  - field: repsol1Diesel
+    label: Repsol 1 Diesel
+    format: number
+  - field: repsol1Gasolina98
+    label: Repsol 1 Gasolina98
+    format: number
+  - field: repsol2
+    label: Repsol 2 update
+    format: text
+  - field: repsol2Diesel
+    label: Repsol 2 Diesel
+    format: number
+  - field: repsol2Gasolina98
+    label: Repsol 2 Gasolina98
+    format: number
+```
+
 ## Notes
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.

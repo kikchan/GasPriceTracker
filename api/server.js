@@ -181,47 +181,62 @@ function filterStations(stations, filters) {
     });
 }
 
-function buildStationWidgetItems(stations) {
+function formatStationUpdateLabel(baseName, rawLastUpdate) {
+  const date = rawLastUpdate ? new Date(rawLastUpdate) : null;
+  const timeString = date && !Number.isNaN(date.getTime())
+    ? date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+    : null;
+
+  if (date && !Number.isNaN(date.getTime())) {
+    const now = new Date();
+    const sameDay =
+      date.getFullYear() === now.getFullYear() &&
+      date.getMonth() === now.getMonth() &&
+      date.getDate() === now.getDate();
+
+    if (sameDay) {
+      return `${baseName} (today at ${timeString})`;
+    }
+
+    const dateString = date.toISOString().slice(0, 10);
+    return `${baseName} (${dateString} ${timeString})`;
+  }
+
+  return `${baseName} (${rawLastUpdate || "unknown"})`;
+}
+
+function formatFuelPrice(value) {
+  if (value === null || value === undefined || value === "" || Number.isNaN(Number(value))) {
+    return null;
+  }
+
+  return Number(value).toFixed(3);
+}
+
+function buildStationWidgetPayload(stations) {
   const stationById = stations.reduce((map, station) => {
     map[station.idEstacion] = station;
     return map;
   }, {});
 
-  return widgetStationIds
-    .map((stationId) => {
-      const station = stationById[stationId];
-      const fuels = stationFuelMap[stationId] || ["Diesel"];
-      const prices = fuels.reduce((acc, fuel) => {
-        acc[fuel] = station && Object.prototype.hasOwnProperty.call(station, fuel) ? station[fuel] : null;
-        return acc;
-      }, {});
+  const payload = {
+    currency: "EUR",
+  };
 
-      const info = stationInfoMap[stationId] || {};
-      const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
-      const direccion = station ? station.direccion : info.address || "";
-      const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
-      const label = `${baseName} (${lastUpdate})`;
-      const name = fuels
-        .map((fuel) => {
-          const value = prices[fuel];
-          return `${fuel}: ${value !== null && value !== undefined ? `${Number(value).toFixed(3)} €` : "N/A"}`;
-        })
-        .join(" / ");
+  widgetStationIds.forEach((stationId) => {
+    const station = stationById[stationId];
+    const info = stationInfoMap[stationId] || {};
+    const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
+    const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
+    const prefix = info.key || `${baseName.toLowerCase().replace(/\s+/g, "")}`;
 
-      return {
-        stationId,
-        name,
-        label,
-        diesel: prices.Diesel ?? null,
-        gasolina95: prices.Gasolina95 ?? null,
-        gasolina98: prices.Gasolina98 ?? null,
-        lastUpdate,
-        direccion,
-        distancia: station ? station.distancia ?? null : null,
-        currency: "EUR",
-      };
-    })
-    .filter(Boolean);
+    payload[`${prefix}`] = formatStationUpdateLabel(baseName, lastUpdate);
+    payload[`${prefix}Diesel`] = formatFuelPrice(station && station.Diesel);
+    payload[`${prefix}Gasolina95`] = formatFuelPrice(station && station.Gasolina95);
+    payload[`${prefix}Gasolina98`] = formatFuelPrice(station && station.Gasolina98);
+  });
+
+  return payload;
 }
 
 function findCheapestStation(stations, selectedFuels) {
@@ -418,7 +433,7 @@ app.get("/api/station-widget", async (req, res) => {
     });
 
     const stations = await fetchPrecioil(precioilUrl);
-    const items = buildStationWidgetItems(stations);
+    const payload = buildStationWidgetPayload(stations);
 
     return res.json({
       fetchedAt: new Date().toISOString(),
@@ -431,7 +446,7 @@ app.get("/api/station-widget", async (req, res) => {
         limit: config.limit,
         fields: config.fields,
       },
-      items,
+      ...payload,
     });
   } catch (error) {
     return res.status(502).json({ error: error.message });
