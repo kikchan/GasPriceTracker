@@ -64,6 +64,11 @@ curl "http://localhost:2032/api/station-widget?city=Finestrat&radius=2"
 ```
 
 The `/api/station-widget` endpoint returns `items` formatted for Homepage's `customapi` widget, with Diesel for all three stations plus Gasolina95 for Petroprix and Gasolina98 for the Repsol stations.
+
+Each item includes:
+- `name` — a fuel price summary string with the `€` currency symbol
+- `label` — the station name with last update date
+- `currency` — always `EUR`
 ## Notes
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.

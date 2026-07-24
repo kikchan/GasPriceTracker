@@ -24,7 +24,7 @@ const defaultConfig = {
   selectedStationName: process.env.SELECTED_STATION_NAME || "",
 };
 
-const widgetStationIds = parseList(process.env.STATION_IDS, ["12061", "13032", "3697"]).map((id) => Number(id)).filter(Boolean);
+const widgetStationIds = [13032, 3697, 12061];
 const stationFuelMap = {
   12061: ["Diesel", "Gasolina98"],
   13032: ["Diesel", "Gasolina95"],
@@ -196,27 +196,29 @@ function buildStationWidgetItems(stations) {
         return acc;
       }, {});
 
-      const fuelParts = fuels
-        .map((fuel) => {
-          const value = prices[fuel];
-          return `${fuel}: ${value ?? "N/A"}`;
-        })
-        .join(" / ");
-
       const info = stationInfoMap[stationId] || {};
       const baseName = info.name || (station ? station.nombreEstacion || station.nombre : `Station ${stationId}`);
       const direccion = station ? station.direccion : info.address || "";
       const lastUpdate = station ? station.lastUpdate || station.fechaCambio || "unknown" : "unknown";
-      const name = `${baseName} (${lastUpdate})`;
+      const label = `${baseName} (${lastUpdate})`;
+      const name = fuels
+        .map((fuel) => {
+          const value = prices[fuel];
+          return `${fuel}: ${value !== null && value !== undefined ? `${Number(value).toFixed(3)} €` : "N/A"}`;
+        })
+        .join(" / ");
 
       return {
         stationId,
         name,
-        label: fuelParts,
+        label,
+        diesel: prices.Diesel ?? null,
+        gasolina95: prices.Gasolina95 ?? null,
+        gasolina98: prices.Gasolina98 ?? null,
         lastUpdate,
         direccion,
         distancia: station ? station.distancia ?? null : null,
-        ...prices,
+        currency: "EUR",
       };
     })
     .filter(Boolean);
