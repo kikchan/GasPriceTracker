@@ -319,6 +319,14 @@ app.get("/api/config", async (req, res) => {
   }
 });
 
+app.get("/healthcheck", (req, res) => {
+  res.json({
+    status: "ok",
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+  });
+});
+
 app.get("/api/prices", async (req, res) => {
   try {
     const query = req.query;

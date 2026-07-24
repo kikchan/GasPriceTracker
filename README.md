@@ -38,6 +38,7 @@ If you access the API from another machine, use the server host and port 2032.
 The backend exposes:
 
 - `GET /api/config` — returns resolved coordinates and active config
+- `GET /healthcheck` — lightweight service health endpoint used by Docker
 - `GET /api/prices` — returns station prices filtered by query params
 - `GET /api/cheapest` — returns the cheapest station selling both Diesel and Gasolina98
 - `GET /api/station-widget` — returns a Homepage custom API payload for the three configured stations
