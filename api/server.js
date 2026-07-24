@@ -32,7 +32,7 @@ const stationFuelMap = {
 };
 const stationInfoMap = {
   12061: {
-    name: "Repsol 2",
+    name: "Repsol Leroy",
     address: "AVENIDA PICASSO, 3",
   },
   13032: {
@@ -40,13 +40,15 @@ const stationInfoMap = {
     address: "AVENIDA PICASSO, 41",
   },
   3697: {
-    name: "Repsol 1",
+    name: "Repsol Corpore",
     address: "AVENIDA FEDERICO GARCIA LORCA, 21",
   },
 };
 
 let geoCache = null;
 
+const PRECIOIL_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
+const precioilCache = new Map();
 function parseNumber(value, fallback = null) {
   if (!value) return fallback;
   const result = Number(value);
@@ -122,25 +124,42 @@ function buildPrecioilUrl({ latitude, longitude, radiusKm, page, limit, fields }
 }
 
 async function fetchPrecioil(apiUrl) {
-  const headers = {
-    Accept: "application/json",
-  }; 
+  const now = Date.now();
+  const cacheEntry = precioilCache.get(apiUrl);
+
+  // Return fresh cache if available
+  if (cacheEntry && now - cacheEntry.fetchedAt < PRECIOIL_CACHE_TTL) {
+    return cacheEntry.payload;
+  }
+
+  const headers = { Accept: "application/json" };
   if (defaultConfig.apiKey) {
     headers["X-API-Key"] = defaultConfig.apiKey;
   }
 
-  const response = await fetch(apiUrl, { headers });
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`Precioil API returned ${response.status}: ${body}`);
-  }
+  try {
+    const response = await fetch(apiUrl, { headers });
+    if (!response.ok) {
+      const body = await response.text();
+      throw new Error(`Precioil API returned ${response.status}: ${body}`);
+    }
 
-  const payload = await response.json();
-  if (!Array.isArray(payload)) {
-    throw new Error("Precioil API responded with an unexpected payload.");
-  }
+    const payload = await response.json();
+    if (!Array.isArray(payload)) {
+      throw new Error("Precioil API responded with an unexpected payload.");
+    }
 
-  return payload;
+    // Cache successful response
+    precioilCache.set(apiUrl, { fetchedAt: Date.now(), payload });
+    return payload;
+  } catch (err) {
+    // On error return cached payload if present
+    if (cacheEntry && cacheEntry.payload) {
+      console.warn("Precioil API fetch failed; returning cached payload:", err.message);
+      return cacheEntry.payload;
+    }
+    throw err;
+  }
 }
 
 function normalizeStationName(value) {
@@ -233,7 +252,7 @@ function buildStationWidgetItems(stations) {
         return price !== null ? `${fuel} ${price} €` : null;
       })
       .filter(Boolean)
-      .join(" / ");
+      .join("    ");
 
     return {
       name: updateLabel,

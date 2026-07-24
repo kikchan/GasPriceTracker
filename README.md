@@ -92,3 +92,4 @@ If your widget system uses `name` and `label` fields for each array item, it sho
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.
 - No database is required for the initial implementation.
+ - Responses from the Precioil API are cached in-memory for 6 hours; on upstream failures the API will return the last successful cached data when available.
