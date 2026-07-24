@@ -1,0 +1,159 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, sans-serif;
+  background: #f4f6fb;
+  color: #1e293b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #eef2ff 0%, #f8fafc 100%);
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 60px;
+}
+
+header {
+  margin-bottom: 24px;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: clamp(2rem, 2.6vw, 3rem);
+}
+
+p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.config-form {
+  display: grid;
+  gap: 18px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 24px;
+  margin-bottom: 28px;
+}
+
+.config-form section {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+input,
+select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  font: inherit;
+}
+
+fieldset {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 16px;
+  padding: 18px;
+}
+
+legend {
+  padding: 0 8px;
+  font-weight: 700;
+}
+
+.fuel-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.fuel-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+button {
+  width: fit-content;
+  min-width: 160px;
+  border: none;
+  border-radius: 999px;
+  background: #4338ca;
+  color: white;
+  padding: 14px 22px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.error,
+.status-card {
+  background: white;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 18px;
+}
+
+.error {
+  color: #b91c1c;
+}
+
+.stations {
+  display: grid;
+  gap: 18px;
+}
+
+.station-card {
+  background: white;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  padding: 22px;
+}
+
+.station-card h2 {
+  margin-top: 0;
+}
+
+.prices {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  margin-top: 14px;
+}
+
+.price-item {
+  background: #eef2ff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+
+.price-item strong {
+  font-size: 1.05rem;
+}

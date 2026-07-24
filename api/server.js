@@ -1,0 +1,232 @@
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const port = parseInt(process.env.PORT, 10) || 2032;
+
+const defaultConfig = {
+  apiKey: process.env.API_KEY || "",
+  city: process.env.CITY || "",
+  latitude: parseNumber(process.env.LATITUDE),
+  longitude: parseNumber(process.env.LONGITUDE),
+  radiusKm: parseNumber(process.env.RADIUS_KM, 2),
+  page: parseInt(process.env.PAGE, 10) || 1,
+  limit: parseInt(process.env.LIMIT, 10) || 50,
+  fields: process.env.FIELDS || "full",
+  selectedFuels: parseList(process.env.SELECTED_FUELS, ["Diesel", "Gasolina95"]),
+  selectedStationId: parseInt(process.env.SELECTED_STATION_ID, 10) || null,
+  selectedStationName: process.env.SELECTED_STATION_NAME || "",
+};
+
+let geoCache = null;
+
+function parseNumber(value, fallback = null) {
+  if (!value) return fallback;
+  const result = Number(value);
+  return Number.isFinite(result) ? result : fallback;
+}
+
+function parseList(value, defaultValue = []) {
+  if (!value || typeof value !== "string") return defaultValue;
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function normalizeLatLon(query) {
+  const lat = parseNumber(query.latitude ?? query.lat ?? query.latitud ?? query.lat, null);
+  const lon = parseNumber(query.longitude ?? query.lon ?? query.lng ?? query.longitud ?? query.long, null);
+  return { latitude: lat, longitude: lon };
+}
+
+async function resolveCoordinates(config) {
+  if (config.latitude !== null && config.longitude !== null) {
+    return { latitude: config.latitude, longitude: config.longitude };
+  }
+
+  if (config.city) {
+    if (geoCache?.city === config.city) {
+      return geoCache.coords;
+    }
+
+    const q = encodeURIComponent(config.city);
+    const url = `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`;
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "GasPriceTracker/1.0 (+https://github.com)",
+        Accept: "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Geocode request failed with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      throw new Error(`Unable to resolve coordinates for city '${config.city}'.`);
+    }
+
+    const coords = {
+      latitude: parseNumber(data[0].lat, null),
+      longitude: parseNumber(data[0].lon, null),
+    };
+    if (coords.latitude === null || coords.longitude === null) {
+      throw new Error(`Geocode response did not contain valid coordinates for '${config.city}'.`);
+    }
+
+    geoCache = { city: config.city, coords };
+    return coords;
+  }
+
+  throw new Error("Missing latitude/longitude or CITY configuration.");
+}
+
+function buildPrecioilUrl({ latitude, longitude, radiusKm, page, limit, fields }) {
+  const url = new URL("https://api.precioil.es/estaciones/radio");
+  url.searchParams.set("latitud", String(latitude));
+  url.searchParams.set("longitud", String(longitude));
+  url.searchParams.set("radio", String(radiusKm));
+  url.searchParams.set("pagina", String(page));
+  url.searchParams.set("limite", String(limit));
+  url.searchParams.set("fields", fields);
+  return url.toString();
+}
+
+async function fetchPrecioil(apiUrl) {
+  const headers = {
+    Accept: "application/json",
+  }; 
+  if (defaultConfig.apiKey) {
+    headers["X-API-Key"] = defaultConfig.apiKey;
+  }
+
+  const response = await fetch(apiUrl, { headers });
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`Precioil API returned ${response.status}: ${body}`);
+  }
+
+  const payload = await response.json();
+  if (!Array.isArray(payload)) {
+    throw new Error("Precioil API responded with an unexpected payload.");
+  }
+
+  return payload;
+}
+
+function normalizeStationName(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function filterStations(stations, filters) {
+  return stations
+    .filter((station) => {
+      if (filters.stationId && station.idEstacion !== filters.stationId) return false;
+      if (filters.stationName) {
+        const name = normalizeStationName(station.nombreEstacion || station.nombre || "");
+        const address = normalizeStationName(station.direccion || "");
+        return name.includes(filters.stationName) || address.includes(filters.stationName);
+      }
+      return true;
+    })
+    .map((station) => {
+      const selectedPrices = {};
+      filters.selectedFuels.forEach((fuel) => {
+        if (Object.prototype.hasOwnProperty.call(station, fuel)) {
+          selectedPrices[fuel] = station[fuel];
+        }
+      });
+
+      return {
+        idEstacion: station.idEstacion,
+        nombreEstacion: station.nombreEstacion || station.nombre || "",
+        direccion: station.direccion || "",
+        lastUpdate: station.lastUpdate || station.fechaCambio || "",
+        marca: station.marca || "",
+        localidad: station.localidad || station.nombreMunicipio || "",
+        provincia: station.provincia || station.provinciaDistrito || "",
+        distancia: station.distancia ?? null,
+        selectedPrices,
+        raw: station,
+      };
+    });
+}
+
+app.get("/api/config", async (req, res) => {
+  try {
+    const coords = await resolveCoordinates(defaultConfig);
+    return res.json({
+      config: {
+        ...defaultConfig,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/prices", async (req, res) => {
+  try {
+    const query = req.query;
+    const queryCoords = normalizeLatLon(query);
+    const config = {
+      apiKey: defaultConfig.apiKey,
+      city: query.city || defaultConfig.city,
+      latitude: queryCoords.latitude !== null ? queryCoords.latitude : defaultConfig.latitude,
+      longitude: queryCoords.longitude !== null ? queryCoords.longitude : defaultConfig.longitude,
+      radiusKm: parseNumber(query.radius ?? query.radiusKm, defaultConfig.radiusKm),
+      page: parseInt(query.page, 10) || defaultConfig.page,
+      limit: parseInt(query.limit, 10) || defaultConfig.limit,
+      fields: query.fields || defaultConfig.fields,
+      selectedFuels: parseList(query.fuels || query.selectedFuels, defaultConfig.selectedFuels),
+      stationId: parseInt(query.stationId, 10) || null,
+      stationName: normalizeStationName(query.stationName || query.station || defaultConfig.selectedStationName),
+    };
+
+    const coords = await resolveCoordinates(config);
+    const precioilUrl = buildPrecioilUrl({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      radiusKm: config.radiusKm,
+      page: config.page,
+      limit: config.limit,
+      fields: config.fields,
+    });
+
+    const stations = await fetchPrecioil(precioilUrl);
+    const filteredStations = filterStations(stations, config);
+
+    return res.json({
+      fetchedAt: new Date().toISOString(),
+      query: {
+        city: config.city,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        radiusKm: config.radiusKm,
+        page: config.page,
+        limit: config.limit,
+        fields: config.fields,
+        selectedFuels: config.selectedFuels,
+        stationId: config.stationId,
+        stationName: config.stationName,
+      },
+      stations: filteredStations,
+    });
+  } catch (error) {
+    return res.status(502).json({ error: error.message });
+  }
+});
+
+app.listen(port, () => {
+  console.log(`GasPriceTracker API listening on port ${port}`);
+});
