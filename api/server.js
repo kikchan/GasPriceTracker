@@ -160,6 +160,30 @@ function filterStations(stations, filters) {
     });
 }
 
+function findCheapestStation(stations, selectedFuels) {
+  const candidates = stations
+    .filter((station) =>
+      selectedFuels.every(
+        (fuel) => Number.isFinite(station[fuel]) && station[fuel] !== null
+      )
+    )
+    .map((station) => {
+      const prices = selectedFuels.reduce((acc, fuel) => {
+        acc[fuel] = station[fuel];
+        return acc;
+      }, {});
+      const totalPrice = selectedFuels.reduce((sum, fuel) => sum + Number(station[fuel]), 0);
+      return {
+        station,
+        prices,
+        totalPrice,
+      };
+    })
+    .sort((a, b) => a.totalPrice - b.totalPrice);
+
+  return candidates.length > 0 ? candidates[0] : null;
+}
+
 app.get("/api/config", async (req, res) => {
   try {
     const coords = await resolveCoordinates(defaultConfig);
@@ -222,6 +246,83 @@ app.get("/api/prices", async (req, res) => {
       },
       stations: filteredStations,
     });
+  } catch (error) {
+    return res.status(502).json({ error: error.message });
+  }
+});
+
+app.get("/api/cheapest", async (req, res) => {
+  try {
+    const query = req.query;
+    const queryCoords = normalizeLatLon(query);
+    const selectedFuels = parseList(query.fuels || query.selectedFuels, ["Diesel", "Gasolina98"]);
+    const config = {
+      apiKey: defaultConfig.apiKey,
+      city: query.city || defaultConfig.city,
+      latitude: queryCoords.latitude !== null ? queryCoords.latitude : defaultConfig.latitude,
+      longitude: queryCoords.longitude !== null ? queryCoords.longitude : defaultConfig.longitude,
+      radiusKm: parseNumber(query.radius ?? query.radiusKm, defaultConfig.radiusKm),
+      page: parseInt(query.page, 10) || defaultConfig.page,
+      limit: parseInt(query.limit, 10) || defaultConfig.limit,
+      fields: query.fields || defaultConfig.fields,
+    };
+
+    const coords = await resolveCoordinates(config);
+    const precioilUrl = buildPrecioilUrl({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      radiusKm: config.radiusKm,
+      page: config.page,
+      limit: config.limit,
+      fields: config.fields,
+    });
+
+    const stations = await fetchPrecioil(precioilUrl);
+    const cheapest = findCheapestStation(stations, selectedFuels);
+    if (!cheapest) {
+      return res.status(404).json({ error: "No station found with all requested fuels." });
+    }
+
+    const station = cheapest.station;
+    const response = {
+      fetchedAt: new Date().toISOString(),
+      query: {
+        city: config.city,
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+        radiusKm: config.radiusKm,
+        page: config.page,
+        limit: config.limit,
+        fields: config.fields,
+        selectedFuels,
+      },
+      station: {
+        idEstacion: station.idEstacion,
+        nombreEstacion: station.nombreEstacion || station.nombre || "",
+        direccion: station.direccion || "",
+        lastUpdate: station.lastUpdate || station.fechaCambio || "",
+        marca: station.marca || "",
+        localidad: station.localidad || station.nombreMunicipio || "",
+        provincia: station.provincia || station.provinciaDistrito || "",
+        distancia: station.distancia ?? null,
+        prices: cheapest.prices,
+        totalPrice: cheapest.totalPrice,
+        label: `${station.nombreEstacion || station.nombre || ""} — Diesel ${cheapest.prices.Diesel} / Gasolina98 ${cheapest.prices.Gasolina98}`,
+      },
+      items: [
+        {
+          station: station.nombreEstacion || station.nombre || "",
+          address: station.direccion || "",
+          diesel: cheapest.prices.Diesel,
+          gasolina98: cheapest.prices.Gasolina98,
+          totalPrice: cheapest.totalPrice,
+          lastUpdate: station.lastUpdate || station.fechaCambio || "",
+          label: `${station.nombreEstacion || station.nombre || ""} — Diesel ${cheapest.prices.Diesel} / Gasolina98 ${cheapest.prices.Gasolina98}`,
+        },
+      ],
+    };
+
+    return res.json(response);
   } catch (error) {
     return res.status(502).json({ error: error.message });
   }
