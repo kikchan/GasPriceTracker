@@ -159,8 +159,6 @@ export default function App() {
           </div>
         ))}
       </div>
-
-      <div className="footer">Powered by GasPriceTracker API on port 2032.</div>
     </div>
   );
 }
