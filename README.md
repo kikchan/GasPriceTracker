@@ -42,6 +42,7 @@ The backend exposes:
 - `GET /api/prices` — returns station prices filtered by query params
 - `GET /api/cheapest` — returns the cheapest station selling both Diesel and Gasolina98
 - `GET /api/station-widget` — returns a Homepage custom API payload for the three configured stations
+- `GET /api/graph-data` — returns persisted graph history for stations and fuels
 
 Query parameters supported by `/api/prices` and `/api/cheapest`:
 
@@ -92,5 +93,4 @@ If your widget system uses `name` and `label` fields for each array item, it sho
 ## Notes
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.
-- No database is required for the initial implementation.
- - Responses from the Precioil API are cached in-memory for 6 hours; on upstream failures the API will return the last successful cached data when available.
+- Price history is persisted in SQLite by default at `./data/prices.db`.

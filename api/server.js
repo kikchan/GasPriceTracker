@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { initDatabase, savePricePoint, getPriceHistory } from "./database.js";
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ let geoCache = null;
 
 const PRECIOIL_CACHE_TTL = 6 * 60 * 60 * 1000; // 6 hours
 const precioilCache = new Map();
+
 function parseNumber(value, fallback = null) {
   if (!value) return fallback;
   const result = Number(value);
@@ -160,6 +162,25 @@ async function fetchPrecioil(apiUrl) {
     }
     throw err;
   }
+}
+
+async function recordPriceHistory(stations) {
+  const timestamp = new Date().toISOString();
+  const savePoints = [];
+
+  widgetStationIds.forEach((stationId) => {
+    const station = stations.find((item) => item.idEstacion === stationId);
+    if (!station) return;
+
+    const fuels = stationFuelMap[stationId] || ["Diesel"];
+    fuels.forEach((fuel) => {
+      const price = formatFuelPrice(station[fuel]);
+      if (price === null) return;
+      savePoints.push(savePricePoint(stationId, fuel, Number(price), timestamp));
+    });
+  });
+
+  await Promise.all(savePoints);
 }
 
 function normalizeStationName(value) {
@@ -482,6 +503,7 @@ app.get("/api/station-widget", async (req, res) => {
     });
 
     const stations = await fetchPrecioil(precioilUrl);
+    await recordPriceHistory(stations);
     const items = buildStationWidgetItems(stations);
 
     return res.json({
@@ -501,6 +523,55 @@ app.get("/api/station-widget", async (req, res) => {
     return res.status(502).json({ error: error.message });
   }
 });
+
+await initDatabase();
+
+app.get("/api/graph-data", async (req, res) => {
+  try {
+    const period = (req.query.period || "1w").toLowerCase();
+    const now = new Date();
+    const periods = {
+      "1d": 1,
+      "1w": 7,
+      "1m": 30,
+      "3m": 90,
+      "6m": 180,
+      "1y": 365,
+    };
+    const days = periods[period] ?? null;
+    const sinceTimestamp = days
+      ? new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
+    const graphData = await Promise.all(
+      widgetStationIds.map(async (stationId) => {
+        const info = stationInfoMap[stationId] || {};
+        const fuels = stationFuelMap[stationId] || ["Diesel"];
+        const series = await Promise.all(
+          fuels.map(async (fuel) => ({
+            fuel,
+            points: await getPriceHistory(stationId, fuel, sinceTimestamp),
+          }))
+        );
+        return {
+          stationId,
+          stationName: info.name || `Station ${stationId}`,
+          series,
+        };
+      })
+    );
+
+    return res.json({
+      fetchedAt: new Date().toISOString(),
+      period: period === "all" ? "all" : period,
+      graphData,
+    });
+  } catch (error) {
+    return res.status(502).json({ error: error.message });
+  }
+});
+
+await initDatabase();
 
 app.listen(port, () => {
   console.log(`GasPriceTracker API listening on port ${port}`);

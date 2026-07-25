@@ -12,3 +12,10 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "2033:2033"
+    depends_on:
+      - api
