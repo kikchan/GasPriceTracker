@@ -13,6 +13,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    restart: always
 
   frontend:
     build: ./frontend
@@ -20,3 +21,4 @@ services:
       - "2033:2033"
     depends_on:
       - api
+    restart: always
