@@ -78,7 +78,7 @@ Example widget config:
 ```yaml
 widget:
   type: customapi
-  url: https://gpt.speedforce.org.es:2032/api/station-widget?city=Finestrat&radius=2
+  url: https://gpt.speedforce.org.es:2033/api/station-widget?city=Finestrat&radius=2
   display: dynamic-list
   refreshInterval: 900000
   method: GET
