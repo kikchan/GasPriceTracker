@@ -53,7 +53,9 @@ function buildDataset(series) {
   }));
 }
 
-const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:2032";
+const apiBaseUrl =
+  import.meta.env.VITE_API_URL ||
+  `${window.location.protocol}//${window.location.hostname}:2032`;
 
 export default function App() {
   const [selectedPeriod, setSelectedPeriod] = useState("1w");
