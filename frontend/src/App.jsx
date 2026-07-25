@@ -53,9 +53,7 @@ function buildDataset(series) {
   }));
 }
 
-const apiBaseUrl =
-  import.meta.env.VITE_API_URL ||
-  `${window.location.protocol}//${window.location.hostname}:2032`;
+const apiBaseUrl = import.meta.env.VITE_API_URL?.trim()?.replace(/\/$/, "") || "http://localhost:2023";
 
 export default function App() {
   const [selectedPeriod, setSelectedPeriod] = useState("1w");
@@ -92,6 +90,15 @@ export default function App() {
       };
     });
   }, [graphData]);
+
+  const yRange = useMemo(() => {
+    const allPrices = chartCards.flatMap(({ datasets }) => datasets.flatMap((dataset) => dataset.data.map((point) => point.y)));
+    if (allPrices.length === 0) return null;
+    const min = Math.min(...allPrices);
+    const max = Math.max(...allPrices);
+    const padding = Math.max((max - min) * 0.1, 0.05);
+    return { min: Math.max(0, min - padding), max: max + padding };
+  }, [chartCards]);
 
   return (
     <div className="app-shell">
@@ -135,6 +142,8 @@ export default function App() {
                       y: {
                         title: { display: true, text: "Price (€)" },
                         ticks: { color: "#cbd5e1" },
+                        min: yRange?.min,
+                        max: yRange?.max,
                       },
                     },
                     plugins: {
