@@ -53,6 +53,8 @@ function buildDataset(series) {
   }));
 }
 
+const apiBaseUrl = import.meta.env.VITE_API_URL || "http://localhost:2032";
+
 export default function App() {
   const [selectedPeriod, setSelectedPeriod] = useState("1w");
   const [graphData, setGraphData] = useState([]);
@@ -64,7 +66,7 @@ export default function App() {
       setLoading(true);
       setError(null);
       try {
-        const response = await axios.get("/api/graph-data", {
+        const response = await axios.get(`${apiBaseUrl}/api/graph-data`, {
           params: { period: selectedPeriod },
         });
         setGraphData(response.data.graphData);
