@@ -115,29 +115,33 @@ export default function App() {
           <div key={station.id} className="card">
             <h2 className="card-title">{station.name}</h2>
             <div className="chart-wrapper">
-              <Line
-                data={{ datasets }}
-                options={{
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  scales: {
-                    x: {
-                      type: "time",
-                      time: { unit: "day", tooltipFormat: "PPpp" },
-                      title: { display: true, text: "Timestamp" },
-                      ticks: { color: "#cbd5e1" },
+              {datasets.length > 0 ? (
+                <Line
+                  data={{ datasets }}
+                  options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                      x: {
+                        type: "time",
+                        time: { unit: "day", tooltipFormat: "PPpp" },
+                        title: { display: true, text: "Timestamp" },
+                        ticks: { color: "#cbd5e1" },
+                      },
+                      y: {
+                        title: { display: true, text: "Price (€)" },
+                        ticks: { color: "#cbd5e1" },
+                      },
                     },
-                    y: {
-                      title: { display: true, text: "Price (€)" },
-                      ticks: { color: "#cbd5e1" },
+                    plugins: {
+                      legend: { labels: { color: "#cbd5e1" } },
+                      tooltip: { mode: "nearest", intersect: false },
                     },
-                  },
-                  plugins: {
-                    legend: { labels: { color: "#cbd5e1" } },
-                    tooltip: { mode: "nearest", intersect: false },
-                  },
-                }}
-              />
+                  }}
+                />
+              ) : (
+                <div className="chart-empty">No price history available yet.</div>
+              )}
             </div>
           </div>
         ))}
