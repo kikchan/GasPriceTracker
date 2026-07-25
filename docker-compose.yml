@@ -2,7 +2,7 @@ services:
   api:
     build: ./api
     ports:
-      - "2023:2032"
+      - "2032:2032"
     env_file:
       - .env
     environment:
@@ -19,6 +19,6 @@ services:
   frontend:
     build: ./frontend
     ports:
-      - "2024:2033"
+      - "2033:2033"
     depends_on:
       - api
