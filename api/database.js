@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import sqlite3 from "sqlite3";
 
-const DB_PATH = process.env.DB_PATH || "./data/prices.db";
+const DB_PATH = process.env.DB_PATH || "../prices.db";
 
 let sqliteDb = null;
 

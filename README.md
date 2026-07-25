@@ -93,4 +93,4 @@ If your widget system uses `name` and `label` fields for each array item, it sho
 ## Notes
 
 - The app uses `.env` for configuration and optional city-to-coordinate resolution.
-- Price history is persisted in SQLite by default at `./data/prices.db`.
+- Price history is persisted in SQLite at `prices.db` in the repository root when using Docker Compose.

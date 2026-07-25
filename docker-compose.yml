@@ -7,6 +7,8 @@ services:
       - .env
     environment:
       - PORT=2032
+    volumes:
+      - ./prices.db:/usr/src/prices.db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2032/healthcheck"]
       interval: 10s
