@@ -53,13 +53,7 @@ function buildDataset(series) {
   }));
 }
 
-const apiBaseUrl = (() => {
-  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
-  if (configuredUrl?.length) {
-    return configuredUrl.replace(/\/$/, "");
-  }
-  return `${window.location.protocol}//${window.location.hostname}:2032`;
-})();
+const apiBaseUrl = import.meta.env.VITE_API_URL?.trim()?.replace(/\/$/, "") || "/api";
 
 export default function App() {
   const [selectedPeriod, setSelectedPeriod] = useState("1w");
