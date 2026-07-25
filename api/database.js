@@ -27,9 +27,10 @@ function allSqlite(db, sql, params = []) {
 export async function initDatabase() {
   const fullPath = path.resolve(process.cwd(), DB_PATH);
   fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  fs.openSync(fullPath, "a");
 
   sqlite3.verbose();
-  sqliteDb = new sqlite3.Database(fullPath);
+  sqliteDb = new sqlite3.Database(fullPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE);
   await runSqlite(
     sqliteDb,
     `CREATE TABLE IF NOT EXISTS price_points (
