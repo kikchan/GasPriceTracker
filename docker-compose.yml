@@ -5,9 +5,9 @@ services:
       - .env
     environment:
       - PORT=2032
-      - DB_PATH=/usr/src/prices.db
+      - DB_PATH=/usr/src/config/prices.db
     volumes:
-      - ./prices.db:/usr/src/prices.db
+      - ./config:/usr/src/config
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:2032/healthcheck"]
       interval: 10s

@@ -26,7 +26,13 @@ function allSqlite(db, sql, params = []) {
 
 export async function initDatabase() {
   const fullPath = path.resolve(process.cwd(), DB_PATH);
-  fs.mkdirSync(path.dirname(fullPath), { recursive: true });
+  const dir = path.dirname(fullPath);
+  fs.mkdirSync(dir, { recursive: true });
+
+  if (fs.existsSync(fullPath) && fs.lstatSync(fullPath).isDirectory()) {
+    throw new Error(`Database path is a directory: ${fullPath}`);
+  }
+
   fs.openSync(fullPath, "a");
 
   sqlite3.verbose();
