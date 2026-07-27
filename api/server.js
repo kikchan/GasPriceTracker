@@ -131,7 +131,7 @@ async function fetchPrecioil(apiUrl) {
 
   // Return fresh cache if available
   if (cacheEntry && now - cacheEntry.fetchedAt < PRECIOIL_CACHE_TTL) {
-    return cacheEntry.payload;
+    return { payload: cacheEntry.payload, cached: true };
   }
 
   const headers = { Accept: "application/json" };
@@ -153,18 +153,18 @@ async function fetchPrecioil(apiUrl) {
 
     // Cache successful response
     precioilCache.set(apiUrl, { fetchedAt: Date.now(), payload });
-    return payload;
+    return { payload, cached: false };
   } catch (err) {
     // On error return cached payload if present
     if (cacheEntry && cacheEntry.payload) {
       console.warn("Precioil API fetch failed; returning cached payload:", err.message);
-      return cacheEntry.payload;
+      return { payload: cacheEntry.payload, cached: true };
     }
     throw err;
   }
 }
 
-async function recordPriceHistory(stations) {
+async function recordPriceHistory(stations, isCached = false) {
   const timestamp = new Date().toISOString();
   const savePoints = [];
 
@@ -176,7 +176,7 @@ async function recordPriceHistory(stations) {
     fuels.forEach((fuel) => {
       const price = formatFuelPrice(station[fuel]);
       if (price === null) return;
-      savePoints.push(savePricePoint(stationId, fuel, Number(price), timestamp));
+      savePoints.push(savePricePoint(stationId, fuel, Number(price), timestamp, isCached));
     });
   });
 
@@ -376,7 +376,7 @@ app.get("/api/prices", async (req, res) => {
       fields: config.fields,
     });
 
-    const stations = await fetchPrecioil(precioilUrl);
+    const { payload: stations } = await fetchPrecioil(precioilUrl);
     const filteredStations = filterStations(stations, config);
 
     return res.json({
@@ -426,7 +426,7 @@ app.get("/api/cheapest", async (req, res) => {
       fields: config.fields,
     });
 
-    const stations = await fetchPrecioil(precioilUrl);
+    const { payload: stations } = await fetchPrecioil(precioilUrl);
     const cheapest = findCheapestStation(stations, selectedFuels);
     if (!cheapest) {
       return res.status(404).json({ error: "No station found with all requested fuels." });
@@ -502,8 +502,8 @@ app.get("/api/station-widget", async (req, res) => {
       fields: config.fields,
     });
 
-    const stations = await fetchPrecioil(precioilUrl);
-    await recordPriceHistory(stations);
+    const { payload: stations, cached } = await fetchPrecioil(precioilUrl);
+    await recordPriceHistory(stations, cached);
     const items = buildStationWidgetItems(stations);
 
     return res.json({
@@ -517,6 +517,7 @@ app.get("/api/station-widget", async (req, res) => {
         limit: config.limit,
         fields: config.fields,
       },
+      cached,
       items,
     });
   } catch (error) {

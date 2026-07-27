@@ -45,27 +45,40 @@ export async function initDatabase() {
       fuel TEXT NOT NULL,
       price REAL NOT NULL,
       timestamp TEXT NOT NULL,
+      is_cached INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )`
   );
+
+  const columns = await allSqlite(sqliteDb, `PRAGMA table_info(price_points)`, []);
+  const hasIsCached = columns.some((column) => column.name === "is_cached");
+  if (!hasIsCached) {
+    await runSqlite(sqliteDb, `ALTER TABLE price_points ADD COLUMN is_cached INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
-export async function savePricePoint(stationId, fuel, price, timestamp) {
+export async function savePricePoint(stationId, fuel, price, timestamp, isCached = false) {
   await runSqlite(
     sqliteDb,
-    `INSERT INTO price_points (station_id, fuel, price, timestamp) VALUES (?, ?, ?, ?)`,
-    [stationId, fuel, price, timestamp]
+    `INSERT INTO price_points (station_id, fuel, price, timestamp, is_cached) VALUES (?, ?, ?, ?, ?)`,
+    [stationId, fuel, price, timestamp, isCached ? 1 : 0]
   );
 }
 
 export async function getPriceHistory(stationId, fuel, sinceTimestamp = null) {
   const params = [stationId, fuel];
-  let sql = `SELECT timestamp, price FROM price_points WHERE station_id = ? AND fuel = ?`;
+  let sql = `SELECT timestamp, price, is_cached FROM price_points WHERE station_id = ? AND fuel = ?`;
   if (sinceTimestamp) {
     sql += ` AND timestamp >= ?`;
     params.push(sinceTimestamp);
   }
   sql += ` ORDER BY timestamp ASC`;
 
-  return allSqlite(sqliteDb, sql, params).then((rows) => rows.map((row) => ({ timestamp: row.timestamp, price: Number(row.price) })));
+  return allSqlite(sqliteDb, sql, params).then((rows) =>
+    rows.map((row) => ({
+      timestamp: row.timestamp,
+      price: Number(row.price),
+      isCached: Boolean(row.is_cached),
+    }))
+  );
 }

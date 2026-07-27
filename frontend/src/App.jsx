@@ -40,16 +40,48 @@ const colors = {
   Gasolina98: "#f472b6",
 };
 
+const pointLabelPlugin = {
+  id: "pointLabelPlugin",
+  afterDatasetsDraw: (chart) => {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (!meta || !meta.data) return;
+
+      meta.data.forEach((element, index) => {
+        const point = dataset.data[index];
+        if (!point || point.isCached) return;
+
+        const value = point.y;
+        const label = Number.isFinite(value) ? value.toFixed(3) : String(value);
+        const { x, y } = element.tooltipPosition();
+
+        ctx.save();
+        ctx.fillStyle = dataset.borderColor || "#ffffff";
+        ctx.font = "12px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.fillText(label, x, y - 8);
+        ctx.restore();
+      });
+    });
+  },
+};
+
 function buildDataset(series) {
   return series.map((seriesItem) => ({
     label: fuelLabels[seriesItem.fuel] || seriesItem.fuel,
-    data: seriesItem.points.map((item) => ({ x: item.timestamp, y: item.price })),
+    data: seriesItem.points.map((item) => ({
+      x: item.timestamp,
+      y: item.price,
+      isCached: item.isCached,
+    })),
     borderColor: colors[seriesItem.fuel] || "#60a5fa",
     backgroundColor: colors[seriesItem.fuel] || "#60a5fa",
     tension: 0.2,
     fill: false,
-    pointRadius: 4,
-    pointHoverRadius: 6,
+    pointRadius: (context) => (context.dataset.data[context.dataIndex]?.isCached ? 0 : 4),
+    pointHoverRadius: (context) => (context.dataset.data[context.dataIndex]?.isCached ? 0 : 6),
   }));
 }
 
@@ -151,6 +183,7 @@ export default function App() {
                       tooltip: { mode: "nearest", intersect: false },
                     },
                   }}
+                  plugins={[pointLabelPlugin]}
                 />
               ) : (
                 <div className="chart-empty">No price history available yet.</div>
