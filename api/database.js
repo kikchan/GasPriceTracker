@@ -65,14 +65,45 @@ export async function savePricePoint(stationId, fuel, price, timestamp, isCached
   );
 }
 
-export async function getPriceHistory(stationId, fuel, sinceTimestamp = null) {
+export async function getPriceHistory(stationId, fuel, sinceTimestamp = null, aggregateByDay = false) {
+  if (!aggregateByDay) {
+    const params = [stationId, fuel];
+    let sql = `SELECT timestamp, price, is_cached FROM price_points WHERE station_id = ? AND fuel = ?`;
+    if (sinceTimestamp) {
+      sql += ` AND timestamp >= ?`;
+      params.push(sinceTimestamp);
+    }
+    sql += ` ORDER BY timestamp ASC`;
+
+    return allSqlite(sqliteDb, sql, params).then((rows) =>
+      rows.map((row) => ({
+        timestamp: row.timestamp,
+        price: Number(row.price),
+        isCached: Boolean(row.is_cached),
+      }))
+    );
+  }
+
   const params = [stationId, fuel];
-  let sql = `SELECT timestamp, price, is_cached FROM price_points WHERE station_id = ? AND fuel = ?`;
+  let dateFilter = "";
   if (sinceTimestamp) {
-    sql += ` AND timestamp >= ?`;
+    dateFilter = "AND timestamp >= ?";
     params.push(sinceTimestamp);
   }
-  sql += ` ORDER BY timestamp ASC`;
+
+  const sql = `
+    SELECT p.timestamp, p.price, p.is_cached
+    FROM price_points p
+    JOIN (
+      SELECT date(timestamp) AS day, MAX(timestamp) AS latest_ts
+      FROM price_points
+      WHERE station_id = ? AND fuel = ? ${dateFilter}
+      GROUP BY day
+    ) q ON date(p.timestamp) = q.day AND p.timestamp = q.latest_ts
+    WHERE p.station_id = ? AND p.fuel = ?
+    ORDER BY p.timestamp ASC
+  `;
+  params.push(stationId, fuel);
 
   return allSqlite(sqliteDb, sql, params).then((rows) =>
     rows.map((row) => ({

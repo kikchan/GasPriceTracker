@@ -551,7 +551,7 @@ app.get("/api/graph-data", async (req, res) => {
         const series = await Promise.all(
           fuels.map(async (fuel) => ({
             fuel,
-            points: await getPriceHistory(stationId, fuel, sinceTimestamp),
+            points: await getPriceHistory(stationId, fuel, sinceTimestamp, period === "1w"),
           }))
         );
         return {
