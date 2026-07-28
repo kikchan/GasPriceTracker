@@ -292,7 +292,7 @@ function buildStationWidgetItems(stations) {
     if (index === 0 || stationGroups[index - 1].stationId !== stationId) {
       const lastUpdate = st ? st.lastUpdate || st.fechaCambio || "unknown" : "unknown";
       const updateLabel = formatStationUpdateLabel(stationName, lastUpdate);
-      items.push({ name: stationName, label: updateLabel });
+      items.push({ name: "", label: updateLabel });
     }
 
     items.push({ name: fuel, label: price !== null ? `${price} €` : "N/A" });
